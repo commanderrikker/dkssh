@@ -18,9 +18,7 @@ pparallel=5  # How many to run at once.
 timeout=10   # SSH connection timeout
 ptimeout=600   # Process timeout (if ssh succeeds, but local process takes too long) .. NOT IN USE
 host_list=""
-host_file="./hosts" # File to read hosts from
 breaker="####################"
-no_space=$(echo $1 |sed 's/ /_/g')
 epoch=$(date +%s)
 tempdir="/tmp"
 logging=0
@@ -39,6 +37,7 @@ OPTIONS:
 }
 
 
+
 ####################
 # Get options 
 ####################
@@ -55,6 +54,10 @@ while [ "$1" != "" ]; do
 		-h)
 			host_file="$2"
 			shift 2
+			;;
+		-l)
+			logging=1
+			shift 1
 			;;
 		-p)
 			pparallel="$2"
@@ -76,11 +79,21 @@ while [ "$1" != "" ]; do
 	esac
 done
 
+# Get list of hosts to run on.
+[ "$host_file" == "" ] && {
+	[ ! -f ./hosts ] && {
+		echo "No hosts file found, or specified."
+		usage
+		exit 1
+	}
+	host_file="./hosts" # File to read hosts from
+}
 # TODO: add test to all clients.
 
 ####################
 # If we're logging use tee to print output to a log.
 ####################
+no_space=$(echo $command |sed 's/ /_/g')
 [ $logging -eq 1 ] && {
 	exec 2>&1
 	exec > >(tee /$tempdir/${epoch}_${no_space}.txt)
