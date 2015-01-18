@@ -5,7 +5,6 @@
 # and you should probably use paralell-ssh instead.
 ################################################################################
 # TODO 
-#		better logging - env variable?
 #		better way to handle multi line output
 #		report on diffs
 #		handle muli command
@@ -14,7 +13,7 @@
 # Initalize Defaults, flags will override.
 summary=0
 user="root"
-pparallel=5  # How many to run at once.
+pparallel=8  # How many to run at once.
 timeout=10   # SSH connection timeout
 ptimeout=600   # Process timeout (if ssh succeeds, but local process takes too long) .. NOT IN USE
 host_list=""
@@ -35,8 +34,6 @@ OPTIONS:
       -u          Username to ssh with (default root).
        "
 }
-
-
 
 ####################
 # Get options 
@@ -108,12 +105,6 @@ no_space=$(echo $command |sed 's/ /_/g')
 	exit 1
 }
 
-# Checks for defaults.
-[ "$host_file" == "" ] && {
-	usage
-	echo "You must specify a host list or host file."
-	exit 1
-}
 ####################
 # Function that takes one aguement that is a command to run.
 # Uses an epoch date to roughly time the command.
@@ -123,9 +114,9 @@ run_command() {
 	local start=$(date +%s)
 
 	# If we want to set process timeout, uncomment, and remove next
-	#timeout $ptimeout ssh -o BatchMode=yes -o ConnectTimeout=$timeout $user@$host "$command" >/$tempdir/$host.out 2>/$tempdir/$host.err &
+	#timeout $ptimeout ssh -o BatchMode=yes -o ConnectTimeout=$timeout -l $user $host "$command" >/$tempdir/$host.out 2>/$tempdir/$host.err &
 
-	ssh -o BatchMode=yes -o ConnectTimeout=$timeout $user@$host "$command" >/$tempdir/$host.out 2>/$tempdir/$host.err &
+	ssh -o BatchMode=yes -o ConnectTimeout=$timeout -l $user $host "$command" >/$tempdir/$host.out 2>/$tempdir/$host.err &
 	local pid=$!
 	wait $pid # Don't change order, or insert commands between here.
 	local rc=$? # Don't change order
