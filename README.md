@@ -1,4 +1,4 @@
 dkssh
 =====
 
-Another parallel ssh command
+Another parallel ssh command.

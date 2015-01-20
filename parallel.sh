@@ -26,13 +26,38 @@ logging=0
 usage(){
 echo "Usage: $0 [OPTIONS] command
 OPTIONS:
-      -d          set -x
       -c          Command to run.
+      -d          set -x
+      -g          group (defined by [group] in hosts file)
       -h          Host file to use (default ./hosts).
-      -p          Paralell ssh commands to run at once (default 5).
+      -p          Paralell ssh commands to run at once (default 8).
       -s          Summarize the output.
       -u          Username to ssh with (default root).
        "
+}
+
+group() {
+# Reads file looking for sections [one], and prints all matching hosts.
+	match=0
+	while read line
+	do
+		# Find the line that matches our request
+		[ "$line" == "[$1]" ] && {
+			match=1
+		}
+
+		# We're in a matched section
+		[ $match == 1 ] && {
+			# Make sure we're not just matching the original string again.
+			[ "$line" != "[$1]" ] && {
+				# If we're at another open bracket we're at the end of a section
+				[[ "$line" == \[* ]] && {
+					break
+				}
+				echo $line >>/tmp/group.$$
+			}
+		}
+	done < $host_file
 }
 
 ####################
@@ -46,6 +71,10 @@ while [ "$1" != "" ]; do
 			;;
 		-c)
 			command="$2"
+			shift 2
+			;;
+		-g)
+			group="$2"
 			shift 2
 			;;
 		-h)
@@ -76,6 +105,8 @@ while [ "$1" != "" ]; do
 	esac
 done
 
+[[ "$debug" -eq "1" ]] && set -x
+
 # Get list of hosts to run on.
 [ "$host_file" == "" ] && {
 	[ ! -f ./hosts ] && {
@@ -87,6 +118,13 @@ done
 }
 # TODO: add test to all clients.
 
+# If a group is used, we create a file in /tmp with members of the group.
+# and use it as our host_file
+[ "$group" != "" ] && {
+	group $group
+	host_file="/tmp/group.$$"
+}
+
 ####################
 # If we're logging use tee to print output to a log.
 ####################
@@ -96,7 +134,6 @@ no_space=$(echo $command |sed 's/ /_/g')
 	exec > >(tee /$tempdir/${epoch}_${no_space}.txt)
 }
 
-[[ "$debug" -eq "1" ]] && set -x
 
 # Checks for defaults.
 [ "$command" == "" ] && {
@@ -151,7 +188,7 @@ echo $breaker
 
 # Loop through and collect results
 count=1
-for host in $(cat $host_file |grep -v ^#)
+for host in $(cat $host_file |egrep -v '^#|^\[')
 do
 	# Print output or summarize.
 	if [ $summary -eq 1 ]
@@ -176,3 +213,4 @@ do
 	count=$(( $count + 1 ))
 done
 
+[ -f /tmp/group.$$ ] && rm /tmp/group.$$
