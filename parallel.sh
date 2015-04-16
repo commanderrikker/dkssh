@@ -33,7 +33,7 @@ OPTIONS:
       -p          Paralell ssh commands to run at once (default 8).
       -s          Summarize the output.
       -u          Username to ssh with (default root).
-       "
+       " 1>&2
 }
 
 group() {
